@@ -6,6 +6,10 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXBuildFile section */
+		12A1A9E72D159DCF0068D210 /* .gitignore in Resources */ = {isa = PBXBuildFile; fileRef = 12A1A9E62D159DC80068D210 /* .gitignore */; };
+/* End PBXBuildFile section */
+
 /* Begin PBXContainerItemProxy section */
 		12A1A9CA2D157DD40068D210 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
@@ -27,6 +31,7 @@
 		12A1A9B62D157DD30068D210 /* clipdobby.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = clipdobby.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		12A1A9C92D157DD40068D210 /* clipdobbyTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = clipdobbyTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		12A1A9D32D157DD40068D210 /* clipdobbyUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = clipdobbyUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		12A1A9E62D159DC80068D210 /* .gitignore */ = {isa = PBXFileReference; lastKnownFileType = text; path = .gitignore; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
@@ -75,6 +80,7 @@
 		12A1A9AD2D157DD30068D210 = {
 			isa = PBXGroup;
 			children = (
+				12A1A9E62D159DC80068D210 /* .gitignore */,
 				12A1A9B82D157DD30068D210 /* clipdobby */,
 				12A1A9CC2D157DD40068D210 /* clipdobbyTests */,
 				12A1A9D62D157DD40068D210 /* clipdobbyUITests */,
@@ -212,6 +218,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				12A1A9E72D159DCF0068D210 /* .gitignore in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
