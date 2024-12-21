@@ -10,31 +10,34 @@ import SwiftUI
 
 class AppDelegate: NSObject, NSApplicationDelegate {
     private var clipboardMonitor: ClipboardMonitor!
-
+    var menuBarManager: MenuBarManager!
+    
     func applicationDidFinishLaunching(_ notification: Notification) {
         print("App has launched!")
         // Initialize clipboard monitoring
         clipboardMonitor = ClipboardMonitor()
         clipboardMonitor.startMonitoring()
         
-        // Set up the menu bar
-        let mainMenu = NSMenu()
-        let appMenu = NSMenu()
-        let appMenuItem = NSMenuItem()
-        appMenuItem.submenu = appMenu
-        mainMenu.addItem(appMenuItem)
+        menuBarManager = MenuBarManager()
         
-        // Add "Open Clipboard History" option
-        let openHistoryItem = NSMenuItem(
-            title: "Open Clipboard History",
-            action: #selector(showHistory),
-            keyEquivalent: "h"
-        )
-        openHistoryItem.target = self
-        appMenu.addItem(openHistoryItem)
-
-        // Assign the menu to the app
-        NSApp.mainMenu = mainMenu
+        // Set up the menu bar
+//        let mainMenu = NSMenu()
+//        let appMenu = NSMenu()
+//        let appMenuItem = NSMenuItem()
+//        appMenuItem.submenu = appMenu
+//        mainMenu.addItem(appMenuItem)
+//        
+//        // Add "Open Clipboard History" option
+//        let openHistoryItem = NSMenuItem(
+//            title: "Open Clipboard History",
+//            action: #selector(showHistory),
+//            keyEquivalent: "h"
+//        )
+//        openHistoryItem.target = self
+//        appMenu.addItem(openHistoryItem)
+//
+//        // Assign the menu to the app
+//        NSApp.mainMenu = mainMenu
     }
 
     func applicationWillTerminate(_ notification: Notification) {
