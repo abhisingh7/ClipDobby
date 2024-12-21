@@ -5,62 +5,37 @@
 //  Created by Abhishek Bhadauriya on 20/12/24.
 //
 
+
 import SwiftUI
-import SwiftData
 
 struct ContentView: View {
-    @Environment(\.modelContext) private var modelContext
-    @Query private var items: [Item]
+    @StateObject private var clipboardMonitor = ClipboardMonitor() // Observe ClipboardMonitor
 
     var body: some View {
-        NavigationSplitView {
-            List {
-                ForEach(items) { item in
-                    NavigationLink {
-                        Text("Item at \(item.timestamp, format: Date.FormatStyle(date: .numeric, time: .standard))")
-                    } label: {
-                        Text(item.timestamp, format: Date.FormatStyle(date: .numeric, time: .standard))
-                    }
-                }
-                .onDelete(perform: deleteItems)
-            }
-#if os(macOS)
-            .navigationSplitViewColumnWidth(min: 180, ideal: 200)
-#endif
-            .toolbar {
-#if os(iOS)
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    EditButton()
-                }
-#endif
-                ToolbarItem {
-                    Button(action: addItem) {
-                        Label("Add Item", systemImage: "plus")
-                    }
+        VStack {
+            Text("Clipboard History")
+                .font(.headline)
+                .padding()
+
+            if clipboardMonitor.clipboardHistory.isEmpty {
+                Text("No clipboard history yet.")
+                    .foregroundColor(.gray)
+            } else {
+                List(clipboardMonitor.clipboardHistory.reversed(), id: \.self) { item in
+                    Text(item)
+                        .lineLimit(1) // Limit lines for long entries
+                        .padding(.vertical, 4)
                 }
             }
-        } detail: {
-            Text("Select an item")
-        }
-    }
 
-    private func addItem() {
-        withAnimation {
-            let newItem = Item(timestamp: Date())
-            modelContext.insert(newItem)
-        }
-    }
-
-    private func deleteItems(offsets: IndexSet) {
-        withAnimation {
-            for index in offsets {
-                modelContext.delete(items[index])
+            Button("Clear History") {
+                clipboardMonitor.clipboardHistory.removeAll()
             }
+            .padding()
+        }
+        .padding()
+        .onAppear {
+            clipboardMonitor.startMonitoring()
         }
     }
-}
-
-#Preview {
-    ContentView()
-        .modelContainer(for: Item.self, inMemory: true)
 }
