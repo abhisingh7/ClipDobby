@@ -12,6 +12,7 @@ enum ClipboardItemType: Equatable, Hashable {
     case text(String)
     case image(NSImage)
     case url(URL)
+    case urlWithMetadata(URL, String) // New case for URLs with titles
 }
 
 extension ClipboardItemType {
@@ -20,6 +21,8 @@ extension ClipboardItemType {
         case (.text(let leftText), .text(let rightText)):
             return leftText == rightText
         case (.url(let leftURL), .url(let rightURL)):
+            return leftURL == rightURL
+        case (.urlWithMetadata(let leftURL, _), .urlWithMetadata(let rightURL, _)):
             return leftURL == rightURL
         case (.image(let leftImage), .image(let rightImage)):
             return leftImage.isEqual(to: rightImage) // Compare NSImages
@@ -43,7 +46,7 @@ class ClipboardMonitor: ObservableObject {
     }
 
     func startMonitoring() {
-        Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { timer in
+        Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { _ in
             let currentChangeCount = NSPasteboard.general.changeCount
             if currentChangeCount != self.lastChangeCount {
                 self.lastChangeCount = currentChangeCount
@@ -52,14 +55,56 @@ class ClipboardMonitor: ObservableObject {
         }
     }
     
+    private func fetchWebpageTitle(for url: URL, completion: @escaping (String?) -> Void) {
+        let task = URLSession.shared.dataTask(with: url) { data, response, error in
+            if let error = error {
+                print("Error fetching title for URL \(url): \(error.localizedDescription)")
+                completion(nil)
+                return
+            }
+            
+            guard let data = data, let htmlString = String(data: data, encoding: .utf8) else {
+                print("Failed to load data or parse HTML for URL \(url)")
+                completion(nil)
+                return
+            }
+            
+            // Use a regex to extract the content inside the <title> tag
+            let regex = try? NSRegularExpression(pattern: "<title[^>]*>(.*?)</title>", options: .caseInsensitive)
+            let range = NSRange(location: 0, length: htmlString.utf16.count)
+            if let match = regex?.firstMatch(in: htmlString, options: [], range: range),
+               let titleRange = Range(match.range(at: 1), in: htmlString) {
+                let title = String(htmlString[titleRange]).trimmingCharacters(in: .whitespacesAndNewlines)
+                print("Extracted title: \(title)")
+                completion(title)
+            } else {
+                print("No title tag found in HTML for URL \(url)")
+                completion(nil)
+            }
+        }
+        task.resume()
+    }
+    
     private func processClipboardChange() {
-        if let urlString = NSPasteboard.general.string(forType: .string),
-           let url = URL(string: urlString), url.isValid {
-            print("Detected URL: \(url)")
-            addClipboardItem(.url(url))
-        } else if let newText = NSPasteboard.general.string(forType: .string) {
-            print("Detected Text: \(newText)")
-            addClipboardItem(.text(newText))
+        if let newText = NSPasteboard.general.string(forType: .string) {
+            if let url = URL(string: newText), url.isValid {
+                print("Detected url: \(url)")
+                fetchWebpageTitle(for: url) { title in
+                    print("Fetched title: \(title ?? "None") for URL: \(url.absoluteString)")
+                    DispatchQueue.main.async {
+                        let urlItem: ClipboardItemType
+                        if let title = title, !title.isEmpty {
+                            urlItem = .urlWithMetadata(url, title)
+                        } else {
+                            urlItem = .url(url)
+                        }
+                        self.addClipboardItem(urlItem)
+                    }
+                }
+            } else {
+                print("Detected Text: \(newText)")
+                addClipboardItem(.text(newText))
+            }
         } else if let image = NSPasteboard.general.data(forType: .tiff),
                   let nsImage = NSImage(data: image) {
             print("Detected Image")
@@ -87,6 +132,8 @@ class ClipboardMonitor: ObservableObject {
                 return ["type": "text", "value": text]
             case .url(let url):
                 return ["type": "url", "value": url.absoluteString]
+            case .urlWithMetadata(let url, let title):
+                            return ["type": "urlWithMetadata", "url": url.absoluteString, "title": title]
             case .image:
                 return ["type": "image", "value": "Unsupported Serialization"] // Placeholder
             }
@@ -106,6 +153,10 @@ class ClipboardMonitor: ObservableObject {
                 if let url = URL(string: value) {
                     return .url(url)
                 }
+            case "urlWithMetadata":
+                if let urlString = dict["url"], let url = URL(string: urlString), let title = dict["title"] {
+                    return .urlWithMetadata(url, title)
+                }
             default:
                 return nil
             }
@@ -117,5 +168,18 @@ class ClipboardMonitor: ObservableObject {
 extension URL {
     var isValid: Bool {
         return (scheme?.hasPrefix("http") == true || scheme?.hasPrefix("https") == true) && host != nil
+    }
+}
+
+extension NSImage {
+    func thumbnail(of size: CGSize) -> NSImage {
+        let thumbnail = NSImage(size: size)
+        thumbnail.lockFocus()
+        self.draw(in: NSRect(origin: .zero, size: size),
+                  from: NSRect(origin: .zero, size: self.size),
+                  operation: .sourceOver,
+                  fraction: 1.0)
+        thumbnail.unlockFocus()
+        return thumbnail
     }
 }

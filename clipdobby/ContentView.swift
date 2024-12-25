@@ -23,6 +23,9 @@ struct ContentView: View {
                     return text.localizedCaseInsensitiveContains(searchQuery)
                 case .url(let url):
                     return url.absoluteString.localizedCaseInsensitiveContains(searchQuery)
+                case .urlWithMetadata(let url, let title):
+                                    return url.absoluteString.localizedCaseInsensitiveContains(searchQuery) ||
+                                           title.localizedCaseInsensitiveContains(searchQuery)
                 case .image:
                     return false // Skip filtering for images for now
                 }
@@ -78,9 +81,41 @@ struct ContentView: View {
                             }
                         }
                         
-                    case .image:
+                    case .urlWithMetadata(let url, let title):
+                        VStack(alignment: .leading) {
+                            HStack {
+                                Image(systemName: "link")
+                                Text(title.isEmpty ? url.absoluteString : title)
+                                    .lineLimit(1)
+                                    .foregroundColor(.blue)
+                            }
+                            if !title.isEmpty {
+                                Text(url.absoluteString)
+                                    .font(.caption)
+                                    .foregroundColor(.gray)
+                            }
+                        }
+                        .contextMenu {
+                            Button("Copy to Clipboard") {
+                                copyToClipboard(item: .urlWithMetadata(url, title))
+                            }
+                            Button("Open URL") {
+                                NSWorkspace.shared.open(url)
+                            }
+                        }
+            
+                    case .image(let img):
+                        
+//                        HStack {
+//                            Image(systemName: "photo")
+//                            Text("Image")
+//                                .foregroundColor(.gray)
+//                        }
                         HStack {
-                            Image(systemName: "photo")
+                            Image(nsImage: img.thumbnail(of: CGSize(width: 40, height: 40)))
+                                .resizable()
+                                .frame(width: 40, height: 40)
+                                .clipShape(RoundedRectangle(cornerRadius: 5))
                             Text("Image")
                                 .foregroundColor(.gray)
                         }
@@ -117,6 +152,8 @@ struct ContentView: View {
             pasteboard.setString(text, forType: .string)
         case .url(let url):
             pasteboard.setString(url.absoluteString, forType: .string)
+        case .urlWithMetadata(let url, _):
+                    pasteboard.setString(url.absoluteString, forType: .string) // Copy only the URL
         case .image(let image):
             if let tiffData = image.tiffRepresentation {
                 pasteboard.setData(tiffData, forType: .tiff)

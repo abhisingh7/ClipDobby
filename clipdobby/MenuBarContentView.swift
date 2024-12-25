@@ -23,6 +23,9 @@ struct MenuBarContentView: View {
                     return text.lowercased().contains(searchText.lowercased())
                 case .url(let url):
                     return url.absoluteString.lowercased().contains(searchText.lowercased())
+                case .urlWithMetadata(let url, let title):
+                                    return url.absoluteString.lowercased().contains(searchText.lowercased()) ||
+                                           title.lowercased().contains(searchText.lowercased())
                 case .image:
                     return false // Skip image filtering for now
                 }
@@ -81,9 +84,40 @@ struct MenuBarContentView: View {
                                 print("Rendering URL: \(url.absoluteString)") // Debugging line
                             }
                             
+                        case .urlWithMetadata(let url, let title):
+                            VStack(alignment: .leading) {
+                                HStack {
+                                    Image(systemName: "link")
+                                    Text(title.isEmpty ? url.absoluteString : title)
+                                        .lineLimit(1)
+                                        .foregroundColor(.blue)
+                                }
+                                if !title.isEmpty {
+                                    Text(url.absoluteString)
+                                        .font(.caption)
+                                        .foregroundColor(.gray)
+                                }
+                            }
+                            .contextMenu {
+                                Button("Copy to Clipboard") {
+                                    copyToClipboard(item: .urlWithMetadata(url, title))
+                                }
+                                Button("Open URL") {
+                                    NSWorkspace.shared.open(url)
+                                }
+                            }
+                            
                         case .image(let image):
+//                            HStack {
+//                                Image(systemName: "photo")
+//                                Text("Image")
+//                            }
+
                             HStack {
-                                Image(systemName: "photo")
+                                Image(nsImage: image.thumbnail(of: CGSize(width: 40, height: 40)))
+                                    .resizable()
+                                    .frame(width: 40, height: 40)
+                                    .clipShape(RoundedRectangle(cornerRadius: 5))
                                 Text("Image")
                             }
                             .contextMenu {
@@ -97,7 +131,8 @@ struct MenuBarContentView: View {
                         }
                     }
                 }
-                .frame(height: 200)
+//                .frame(height: 200)
+                .frame(maxHeight: 300)
             }
 
 
@@ -122,6 +157,8 @@ struct MenuBarContentView: View {
             pasteboard.setString(text, forType: .string)
         case .url(let url):
             pasteboard.setString(url.absoluteString, forType: .string)
+        case .urlWithMetadata(let url, _):
+                pasteboard.setString(url.absoluteString, forType: .string) // Copy only the URL
         case .image(let image):
             if let tiffData = image.tiffRepresentation {
                 pasteboard.setData(tiffData, forType: .tiff)
@@ -129,10 +166,3 @@ struct MenuBarContentView: View {
         }
     }
 }
-
-//extension URL {
-//    var isValid: Bool {
-//        // Check for a valid scheme and host
-//        return scheme?.hasPrefix("http") == true && host != nil
-//    }
-//}
