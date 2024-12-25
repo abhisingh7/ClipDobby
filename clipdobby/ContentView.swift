@@ -13,11 +13,20 @@ struct ContentView: View {
     @State private var searchQuery: String = "" // For search functionality
 
     // Filtered items based on search query
-    var filteredClipboardHistory: [String] {
+    var filteredClipboardHistory: [ClipboardItemType] {
         if searchQuery.isEmpty {
-            return clipboardMonitor.clipboardHistory.reversed()
+            return clipboardMonitor.clipboardHistory
         } else {
-            return clipboardMonitor.clipboardHistory.reversed().filter { $0.localizedCaseInsensitiveContains(searchQuery) }
+            return clipboardMonitor.clipboardHistory.filter { item in
+                switch item {
+                case .text(let text):
+                    return text.localizedCaseInsensitiveContains(searchQuery)
+                case .url(let url):
+                    return url.absoluteString.localizedCaseInsensitiveContains(searchQuery)
+                case .image:
+                    return false // Skip filtering for images for now
+                }
+            }
         }
     }
 
@@ -39,16 +48,50 @@ struct ContentView: View {
             } else {
                 // List with context menu for copying items back
                 List(filteredClipboardHistory, id: \.self) { item in
-                    Text(item)
-                        .lineLimit(1) // Limit lines for long entries
-                        .padding(.vertical, 4)
+                    switch item {
+                    case .text(let text):
+                        HStack {
+                            Image(systemName: "doc.text")
+                            Text(text)
+                                .lineLimit(1) // Limit lines for long entries
+                                .foregroundColor(.primary)
+                        }
                         .contextMenu {
-                            Button("Copy Back") {
-                                NSPasteboard.general.clearContents()
-                                NSPasteboard.general.setString(item, forType: .string)
+                            Button("Copy to Clipboard") {
+                                copyToClipboard(item: .text(text))
                             }
                         }
+                        
+                    case .url(let url):
+                        HStack {
+                            Image(systemName: "link")
+                            Text(url.absoluteString)
+                                .lineLimit(1)
+                                .foregroundColor(.blue)
+                        }
+                        .contextMenu {
+                            Button("Copy to Clipboard") {
+                                copyToClipboard(item: .url(url))
+                            }
+                            Button("Open URL") {
+                                NSWorkspace.shared.open(url)
+                            }
+                        }
+                        
+                    case .image:
+                        HStack {
+                            Image(systemName: "photo")
+                            Text("Image")
+                                .foregroundColor(.gray)
+                        }
+                        .contextMenu {
+                            Button("Copy to Clipboard") {
+                                copyToClipboard(item: item)
+                            }
+                        }
+                    }
                 }
+                .frame(height: 400) // Adjust as per requirement
             }
 
             // Clear History Button
@@ -62,5 +105,22 @@ struct ContentView: View {
             clipboardMonitor.startMonitoring()
         }
         .frame(width: 400, height: 600) // Adjust frame size
+    }
+
+    /// Copies the selected clipboard item back to the clipboard
+    private func copyToClipboard(item: ClipboardItemType) {
+        let pasteboard = NSPasteboard.general
+        pasteboard.clearContents()
+        
+        switch item {
+        case .text(let text):
+            pasteboard.setString(text, forType: .string)
+        case .url(let url):
+            pasteboard.setString(url.absoluteString, forType: .string)
+        case .image(let image):
+            if let tiffData = image.tiffRepresentation {
+                pasteboard.setData(tiffData, forType: .tiff)
+            }
+        }
     }
 }
